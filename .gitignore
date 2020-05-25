@@ -1,0 +1,7 @@
+build
+dist
+env
+.vscode
+__pycache__
+app.spec
+mp3
