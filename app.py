@@ -1,5 +1,3 @@
-# ALL CREDITS TO https://github.com/ritiek/spotify-downloader
-
 import os
 import sys
 import spotipy
@@ -71,19 +69,16 @@ class GUI(QWidget):
     def create_grid(self):
         self.horizontalGroupBox = QGroupBox()
         layout = QGridLayout()
-        self.link = QPlainTextEdit('', self)
+        self.link = QLineEdit('', self)
         self.link.setMaximumHeight(int(HEIGHT/3))
         self.btn = QPushButton('Download', self)
         self.btn.resize(self.btn.sizeHint())
         self.btn.clicked.connect(self.download)
-        # self.extract = QCheckBox('Extract Audio')
-        # self.extract.setChecked(True)
         self._dir = QPushButton('Select Directory', self)
         self._dir.clicked.connect(self.directory)
         self.info = QLabel('-----')
         layout.addWidget(self.link, 0, 0)
         layout.addWidget(self.btn, 0, 1)
-        # layout.addWidget(self.extract, 0, 2)
         layout.addWidget(self._dir, 1, 1)
         layout.addWidget(self.info, 1, 0)
         self.horizontalGroupBox.setLayout(layout)
@@ -97,23 +92,20 @@ class GUI(QWidget):
         ProcessRunnable(target=self._download, args=()).start()
 
     def _download(self):
-        with youtube_dl.YoutubeDL(YDL_OPTS) as dl:
-            os.chdir(self.dir)
-            try:
-                playlist_id = self.link.toPlainText().split(
-                    '/')[-1].split('?')[0]
-                p = spotify.playlist(playlist_id)
-                # queries = []
-                for track in p['tracks']['items']:
-                    query = track['track']['name'] + ' by ' + \
-                        ', '.join([x['name']
-                                   for x in track['track']['artists']])
-                    self.info.setText(query)
+        os.chdir(self.dir)
+        try:
+            playlist_id = self.link.text().split(
+                '/')[-1].split('?')[0]
+            p = spotify.playlist(playlist_id)
+            for track in p['tracks']['items']:
+                query = track['track']['name'] + ' by ' + \
+                    ', '.join([x['name']
+                               for x in track['track']['artists']])
+                self.info.setText(query)
+                with youtube_dl.YoutubeDL(YDL_OPTS) as dl:
                     dl.download([query])
-                    # queries.append(query)
-                # dl.download(queries)
-            except Exception as e:
-                print(e)
+        except Exception as e:
+            print(e)
 
 
 if __name__ == "__main__":
