@@ -1,14 +1,12 @@
 import os
 import sys
+import json
 import spotipy
 import youtube_dl
 
 from PyQt5.QtWidgets import *
 from PyQt5.QtGui import *
 from PyQt5.QtCore import *
-
-CLIENT_ID = '11aff9c705c3475283a84868a9bda0e5'
-CLIENT_SECRET = '8027e1d8f33d4a2b9c4079d9467d4cea'
 
 WIDTH = 500
 HEIGHT = 150
@@ -22,9 +20,6 @@ YDL_OPTS = {
         'preferredquality': '192',
     }],
 }
-
-spotify = spotipy.Spotify(client_credentials_manager=spotipy.SpotifyClientCredentials(
-    client_id=CLIENT_ID, client_secret=CLIENT_SECRET))
 
 
 class ProcessRunnable(QRunnable):
@@ -77,16 +72,27 @@ class GUI(QWidget):
         self._dir = QPushButton('Select Directory', self)
         self._dir.clicked.connect(self.directory)
         self.info = QLabel('-----')
+        self.credentials = QPushButton('credentials.json', self)
+        self.credentials.clicked.connect(self.creds)
         layout.addWidget(self.link, 0, 0)
         layout.addWidget(self.btn, 0, 1)
         layout.addWidget(self._dir, 1, 1)
         layout.addWidget(self.info, 1, 0)
+        layout.addWidget(self.credentials, 2, 1)
         self.horizontalGroupBox.setLayout(layout)
+
+    def creds(self):
+        self.creds, _ = QFileDialog.getOpenFileName(
+            filter='credentials.json', initialFilter='credentials.json')
+        self.creds = json.loads(open(self.creds, 'r').read())
+        print('credentials: ' + str(self.creds))
+        self.creds = spotipy.SpotifyClientCredentials(
+            client_id=self.creds['client_id'], client_secret=self.creds['client_secret'])
 
     def directory(self):
         self.dir = str(QFileDialog.getExistingDirectory(
             self, 'Select Directory'))
-        print(self.dir)
+        print('directory: ' + self.dir)
 
     def download(self):
         ProcessRunnable(target=self._download, args=()).start()
@@ -96,11 +102,12 @@ class GUI(QWidget):
         try:
             playlist_id = self.link.text().split(
                 '/')[-1].split('?')[0]
-            p = spotify.playlist(playlist_id)
-            for track in p['tracks']['items']:
+            spotify = spotipy.Spotify(client_credentials_manager=self.creds)
+            for track in spotify.playlist(playlist_id)['tracks']['items']:
                 query = track['track']['name'] + ' by ' + \
                     ', '.join([x['name']
                                for x in track['track']['artists']])
+                print(query)
                 self.info.setText(query)
                 with youtube_dl.YoutubeDL(YDL_OPTS) as dl:
                     dl.download([query])
